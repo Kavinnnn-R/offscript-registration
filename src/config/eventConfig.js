@@ -14,7 +14,7 @@ const eventConfig = {
     'https://www.google.com/maps/search/?api=1&query=Senaro+Luxury+Farm+Sholayur+Palakkad+Kerala',
 
   // Must match the ticket_price in Supabase.
-  registrationAmount: 1499,
+  registrationAmount: 1599,
   currency: 'INR',
 
   maxPeoplePerRegistration: 4,
