@@ -145,7 +145,7 @@ function normalizeParticipants(body, maxParticipants = 4) {
     phone: clean(p.phone),
     email: clean(p.email).toLowerCase(),
     profession: clean(p.profession),
-    age_group: clean(p.ageGroup),
+    age: clean(p.ageGroup),
     participant_order: i + 1
   }))
 
@@ -155,7 +155,7 @@ function normalizeParticipants(body, maxParticipants = 4) {
       !phoneRegex.test(p.phone) ||
       !emailRegex.test(p.email) ||
       !p.profession ||
-      !allowedAgeGroups.has(p.age_group)
+      !allowedAgeGroups.has(p.age)
     ) {
       return {
         error:
@@ -302,14 +302,14 @@ app.post('/api/payments/create-order', async (req, res) => {
           registration_code: registrationCode,
           event_name: event.event_name,
           member_count: participants.length,
-          amount_due: amountPaise / 100,
+          amount: amountPaise / 100,
           currency: 'INR',
           payment_status: 'pending',
           registration_status: 'pending',
           razorpay_order_id: order.id
         })
         .select(
-          'id,registration_code,member_count,amount_due,currency,payment_status,registration_status'
+          'id,registration_code,member_count,amount,currency,payment_status,registration_status'
         )
         .single()
 
@@ -364,7 +364,7 @@ app.post('/api/payments/create-order', async (req, res) => {
       registrationId: registration.id,
       registrationCode: registration.registration_code,
       participantCount: registration.member_count,
-      amountDue: registration.amount_due
+      amountDue: registration.amount
     })
   } catch (error) {
     console.error('Create payment order failed:', error.message)
@@ -412,7 +412,7 @@ app.post('/api/payments/verify', async (req, res) => {
       await supabase
         .from('registrations')
         .select(
-          'id,registration_code,amount_due,currency,payment_status,registration_status,razorpay_order_id,razorpay_payment_id'
+          'id,registration_code,amount,currency,payment_status,registration_status,razorpay_order_id,razorpay_payment_id'
         )
         .eq('id', registrationId)
         .maybeSingle()
@@ -451,7 +451,7 @@ app.post('/api/payments/verify', async (req, res) => {
 
     if (
       payment.order_id !== orderId ||
-      Number(payment.amount) !== Math.round(Number(registration.amount_due) * 100) ||
+      Number(payment.amount) !== Math.round(Number(registration.amount) * 100) ||
       payment.currency !== registration.currency
     ) {
       return res.status(400).json({
@@ -607,7 +607,7 @@ app.get('/api/admin/registrations', adminAuth, async (req, res) => {
     const { data, error } = await supabase
       .from('registrations')
       .select(
-        'id,registration_code,event_name,member_count,amount_due,currency,payment_status,registration_status,razorpay_order_id,razorpay_payment_id,created_at,attendees(id,name,phone,email,profession,age_group,participant_order,pass_code)'
+        'id,registration_code,event_name,member_count,amount,currency,payment_status,registration_status,razorpay_order_id,razorpay_payment_id,created_at,attendees(id,name,phone,email,profession,age,participant_order,pass_code)'
       )
       .order('created_at', { ascending: false })
       .limit(limit)
@@ -635,7 +635,7 @@ app.get('/api/admin/summary', adminAuth, async (_req, res) => {
     const { data, error } = await supabase
       .from('registrations')
       .select(
-        'id,member_count,amount_due,payment_status,registration_status'
+        'id,member_count,amount,payment_status,registration_status'
       )
 
     if (error) {
@@ -660,12 +660,12 @@ app.get('/api/admin/summary', adminAuth, async (_req, res) => {
         0
       ),
       totalPaidAmount: paidRows.reduce(
-        (sum, r) => sum + Number(r.amount_due || 0),
+        (sum, r) => sum + Number(r.amount || 0),
         0
       ),
       pendingAmount: rows
         .filter(r => r.payment_status === 'pending')
-        .reduce((sum, r) => sum + Number(r.amount_due || 0), 0)
+        .reduce((sum, r) => sum + Number(r.amount || 0), 0)
     })
   } catch (error) {
     console.error('Admin summary failed:', error.message)
