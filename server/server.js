@@ -141,7 +141,7 @@ function normalizeParticipants(body, maxParticipants = 4) {
   }
 
   const normalized = participants.map((p, i) => ({
-    full_name: clean(p.fullName),
+    name: clean(p.fullName),
     phone: clean(p.phone),
     email: clean(p.email).toLowerCase(),
     profession: clean(p.profession),
@@ -151,7 +151,7 @@ function normalizeParticipants(body, maxParticipants = 4) {
 
   for (const p of normalized) {
     if (
-      !p.full_name ||
+      !p.name ||
       !phoneRegex.test(p.phone) ||
       !emailRegex.test(p.email) ||
       !p.profession ||
@@ -301,7 +301,7 @@ app.post('/api/payments/create-order', async (req, res) => {
         .insert({
           registration_code: registrationCode,
           event_name: event.event_name,
-          participant_count: participants.length,
+          member_count: participants.length,
           amount_due: amountPaise / 100,
           currency: 'INR',
           payment_status: 'pending',
@@ -309,7 +309,7 @@ app.post('/api/payments/create-order', async (req, res) => {
           razorpay_order_id: order.id
         })
         .select(
-          'id,registration_code,participant_count,amount_due,currency,payment_status,registration_status'
+          'id,registration_code,member_count,amount_due,currency,payment_status,registration_status'
         )
         .single()
 
@@ -363,7 +363,7 @@ app.post('/api/payments/create-order', async (req, res) => {
       currency: order.currency,
       registrationId: registration.id,
       registrationCode: registration.registration_code,
-      participantCount: registration.participant_count,
+      participantCount: registration.member_count,
       amountDue: registration.amount_due
     })
   } catch (error) {
@@ -480,7 +480,7 @@ app.post('/api/payments/verify', async (req, res) => {
         await supabase
           .from('attendees')
           .select(
-            'pass_code,full_name,participant_order'
+            'pass_code,name,participant_order'
           )
           .eq('registration_id', registration.id)
           .order('participant_order', { ascending: true })
@@ -499,7 +499,7 @@ app.post('/api/payments/verify', async (req, res) => {
         registrationStatus: 'confirmed',
         passes: (existingAttendees || []).map(a => ({
           passCode: a.pass_code,
-          fullName: a.full_name,
+          fullName: a.name,
           participantOrder: a.participant_order
         })),
         message: 'Payment was already verified.'
@@ -554,7 +554,7 @@ app.post('/api/payments/verify', async (req, res) => {
 
     const { data: attendees, error: attendeesError } = await supabase
       .from('attendees')
-      .select('pass_code,full_name,participant_order')
+      .select('pass_code,name,participant_order')
       .eq('registration_id', registration.id)
       .order('participant_order', { ascending: true })
 
@@ -580,7 +580,7 @@ app.post('/api/payments/verify', async (req, res) => {
       registrationStatus: 'confirmed',
       passes: attendees.map(a => ({
         passCode: a.pass_code,
-        fullName: a.full_name,
+        fullName: a.name,
         participantOrder: a.participant_order
       })),
       message: 'Payment verified. Registration confirmed.'
@@ -607,7 +607,7 @@ app.get('/api/admin/registrations', adminAuth, async (req, res) => {
     const { data, error } = await supabase
       .from('registrations')
       .select(
-        'id,registration_code,event_name,participant_count,amount_due,currency,payment_status,registration_status,razorpay_order_id,razorpay_payment_id,created_at,attendees(id,full_name,phone,email,profession,age_group,participant_order,pass_code)'
+        'id,registration_code,event_name,member_count,amount_due,currency,payment_status,registration_status,razorpay_order_id,razorpay_payment_id,created_at,attendees(id,name,phone,email,profession,age_group,participant_order,pass_code)'
       )
       .order('created_at', { ascending: false })
       .limit(limit)
@@ -635,7 +635,7 @@ app.get('/api/admin/summary', adminAuth, async (_req, res) => {
     const { data, error } = await supabase
       .from('registrations')
       .select(
-        'id,participant_count,amount_due,payment_status,registration_status'
+        'id,member_count,amount_due,payment_status,registration_status'
       )
 
     if (error) {
@@ -651,12 +651,12 @@ app.get('/api/admin/summary', adminAuth, async (_req, res) => {
     return res.json({
       registrations: rows.length,
       participants: rows.reduce(
-        (sum, r) => sum + Number(r.participant_count || 0),
+        (sum, r) => sum + Number(r.member_count || 0),
         0
       ),
       paidRegistrations: paidRows.length,
       paidParticipants: paidRows.reduce(
-        (sum, r) => sum + Number(r.participant_count || 0),
+        (sum, r) => sum + Number(r.member_count || 0),
         0
       ),
       totalPaidAmount: paidRows.reduce(
